@@ -165,6 +165,30 @@ uv run shinkoku profile --config shinkoku.config.yaml
 - 形式: `[type]: [description]`（英語）
 - type: `feat` / `fix` / `ci` / `refactor` / `test` / `docs`
 
+### バージョン管理
+
+セマンティックバージョニング（`MAJOR.MINOR.PATCH`）に従う。
+
+| 変更の種類 | バージョン | 例 |
+|-----------|-----------|-----|
+| 後方互換性のない変更（CLI 引数削除・出力形式変更等） | MAJOR | 0.x → 1.0.0 |
+| 機能追加（新コマンド・新スキル等） | MINOR | 0.1.0 → 0.2.0 |
+| バグ修正・ドキュメント修正 | PATCH | 0.2.0 → 0.2.1 |
+
+**更新が必要なファイル（2箇所を同期）:**
+
+- `pyproject.toml` — `version` フィールド
+- `.claude-plugin/marketplace.json` — `plugins[0].version` フィールド
+
+**更新不要なファイル:**
+
+- `.claude-plugin/plugin.json` — version フィールドなし（marketplace.json に一元化）
+
+**CI による検証:**
+
+- PR で `src/shinkoku/` または `skills/` に変更がある場合、`marketplace.json` のバージョンがベースブランチから更新されていること、`pyproject.toml` と一致することを自動チェックする
+- `tests/`・`.github/`・`*.md`・`Makefile` のみの変更ではバージョン更新不要
+
 ## DB 規約
 
 - SQLite WAL モード + `foreign_keys=ON`
