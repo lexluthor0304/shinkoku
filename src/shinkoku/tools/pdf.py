@@ -52,21 +52,22 @@ def to_images(*, file_path: str, output_dir: str, dpi: int = 200) -> dict:
         import pypdfium2 as pdfium
 
         pdf = pdfium.PdfDocument(file_path)
-        image_paths: list[str] = []
-        stem = path.stem
+        try:
+            image_paths: list[str] = []
+            stem = path.stem
 
-        for i in range(len(pdf)):
-            page = pdf[i]
-            # scale = dpi / 72（PDF のデフォルト解像度は 72 DPI）
-            scale = dpi / 72
-            bitmap = page.render(scale=scale)
-            pil_image = bitmap.to_pil()
-            image_name = f"{stem}_page{i + 1}.png"
-            image_path = out / image_name
-            pil_image.save(str(image_path))
-            image_paths.append(str(image_path))
-
-        pdf.close()
+            for i in range(len(pdf)):
+                page = pdf[i]
+                # scale = dpi / 72（PDF のデフォルト解像度は 72 DPI）
+                scale = dpi / 72
+                bitmap = page.render(scale=scale)
+                pil_image = bitmap.to_pil()
+                image_name = f"{stem}_page{i + 1}.png"
+                image_path = out / image_name
+                pil_image.save(str(image_path))
+                image_paths.append(str(image_path))
+        finally:
+            pdf.close()
         return {
             "status": "ok",
             "file_path": file_path,

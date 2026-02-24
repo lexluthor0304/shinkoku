@@ -73,7 +73,7 @@ jobs:
           # src/ または skills/ の変更を検出（tests/, .github/, *.md, Makefile は除外）
           CHANGED=$(git diff --name-only "$BASE_SHA"...HEAD -- \
             'src/shinkoku/' 'skills/' \
-            ':!tests/' ':!.github/' ':!*.md' ':!Makefile')
+            ':!tests/' ':!.github/' ':!CLAUDE.md' ':!README.md' ':!CHANGELOG.md' ':!Makefile')
 
           if [ -z "$CHANGED" ]; then
             echo "No source/skill changes detected — version bump not required."

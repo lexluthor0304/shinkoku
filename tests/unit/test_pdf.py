@@ -80,6 +80,21 @@ def test_to_images_valid_pdf(tmp_path: Path):
     assert Path(result["images"][0]).suffix == ".png"
 
 
+def test_extract_text_with_content(tmp_path: Path):
+    """テキストを含む PDF からテキスト抽出できることを検証する。"""
+    from fpdf import FPDF
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=12)
+    pdf.cell(text="Hello PDF World")
+    pdf.output(str(tmp_path / "text.pdf"))
+
+    result = extract_text(file_path=str(tmp_path / "text.pdf"))
+    assert result["status"] == "ok"
+    assert "Hello PDF World" in result["full_text"]
+
+
 def test_to_images_creates_output_dir(tmp_path: Path):
     """output_dir が存在しない場合に自動作成されることを検証する。"""
     import pypdfium2 as pdfium
