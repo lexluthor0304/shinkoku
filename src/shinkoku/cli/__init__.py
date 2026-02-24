@@ -19,6 +19,7 @@ def main() -> None:
         furusato,
         import_data,
         ledger,
+        pdf,
         profile,
         tax_calc,
     )
@@ -28,6 +29,7 @@ def main() -> None:
     tax_calc.register(subparsers)
     furusato.register(subparsers)
     profile.register(subparsers)
+    pdf.register(subparsers)
 
     args = parser.parse_args()
     if not hasattr(args, "func"):

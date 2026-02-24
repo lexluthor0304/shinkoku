@@ -226,19 +226,13 @@ def import_receipt(*, file_path: str) -> dict:
 
 
 def _extract_pdf_text(file_path: str) -> str:
-    """Extract text from a PDF using pdfplumber."""
-    try:
-        import pdfplumber
+    """Extract text from a PDF using tools/pdf.extract_text()."""
+    from shinkoku.tools.pdf import extract_text
 
-        text_parts = []
-        with pdfplumber.open(file_path) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text_parts.append(page_text)
-        return "\n".join(text_parts)
-    except Exception:
-        return ""
+    result = extract_text(file_path=file_path)
+    if result.get("status") == "ok":
+        return result.get("full_text", "")
+    return ""
 
 
 def import_invoice(*, file_path: str) -> dict:
