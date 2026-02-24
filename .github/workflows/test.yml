@@ -57,6 +57,68 @@ jobs:
       - name: Integration tests
         run: uv run pytest tests/integration/ -v --tb=short || test $? -eq 5
 
+  version-check:
+    name: Version Check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version bump is needed
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          # src/ または skills/ の変更を検出（tests/, .github/, *.md, Makefile は除外）
+          CHANGED=$(git diff --name-only "$BASE_SHA"...HEAD -- \
+            'src/shinkoku/' 'skills/' \
+            ':!tests/' ':!.github/' ':!*.md' ':!Makefile')
+
+          if [ -z "$CHANGED" ]; then
+            echo "No source/skill changes detected — version bump not required."
+            exit 0
+          fi
+
+          echo "Source/skill changes detected:"
+          echo "$CHANGED"
+
+          # marketplace.json のバージョンがベースから更新されているか
+          BASE_MKT_VER=$(git show "$BASE_SHA":.claude-plugin/marketplace.json | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          print(data['plugins'][0]['version'])
+          ")
+          HEAD_MKT_VER=$(python3 -c "
+          import json
+          with open('.claude-plugin/marketplace.json') as f:
+              data = json.load(f)
+          print(data['plugins'][0]['version'])
+          ")
+
+          if [ "$BASE_MKT_VER" = "$HEAD_MKT_VER" ]; then
+            echo "::error::marketplace.json version ($HEAD_MKT_VER) was not updated. Bump the version when changing src/ or skills/."
+            exit 1
+          fi
+
+          # pyproject.toml と marketplace.json のバージョンが一致するか
+          PYPROJECT_VER=$(python3 -c "
+          import re
+          with open('pyproject.toml') as f:
+              for line in f:
+                  m = re.match(r'version\s*=\s*\"(.+?)\"', line)
+                  if m:
+                      print(m.group(1))
+                      break
+          ")
+
+          if [ "$PYPROJECT_VER" != "$HEAD_MKT_VER" ]; then
+            echo "::error::Version mismatch: pyproject.toml=$PYPROJECT_VER, marketplace.json=$HEAD_MKT_VER. Keep them in sync."
+            exit 1
+          fi
+
+          echo "Version check passed: $HEAD_MKT_VER"
+
   coverage:
     name: Coverage
     needs: test
