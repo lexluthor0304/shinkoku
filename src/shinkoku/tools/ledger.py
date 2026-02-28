@@ -887,6 +887,114 @@ def ledger_bs(*, db_path: str, fiscal_year: int) -> dict:
 
 
 # ============================================================
+# 総勘定元帳 (General Ledger)
+# ============================================================
+
+
+def ledger_general_ledger(*, db_path: str, fiscal_year: int, account_code: str) -> dict:
+    """総勘定元帳: 指定勘定科目の全仕訳を日付順に表示し、累積残高を計算する。"""
+    conn = get_connection(db_path)
+    try:
+        # 科目情報を取得
+        account = conn.execute(
+            "SELECT code, name, category FROM accounts WHERE code = ?",
+            (account_code,),
+        ).fetchone()
+        if account is None:
+            return {
+                "status": "error",
+                "message": f"Account code not found: {account_code}",
+            }
+        account_name = account["name"]
+        category = account["category"]
+
+        # 正常残高方向を判定: 資産(1xxx)・費用(5xxx) = 借方, 負債(2xxx)・純資産(3xxx)・収益(4xxx) = 貸方
+        debit_normal = category in ("asset", "expense")
+
+        # 期首残高を取得
+        ob_row = conn.execute(
+            "SELECT amount FROM opening_balances WHERE fiscal_year = ? AND account_code = ?",
+            (fiscal_year, account_code),
+        ).fetchone()
+        opening_balance = ob_row["amount"] if ob_row else 0
+
+        # 当該科目の全仕訳行を日付順に取得
+        rows = conn.execute(
+            "SELECT jl.id AS line_id, j.id AS journal_id, j.date, j.description, "
+            "j.counterparty, jl.side, jl.amount "
+            "FROM journal_lines jl "
+            "INNER JOIN journals j ON j.id = jl.journal_id "
+            "WHERE jl.account_code = ? AND j.fiscal_year = ? "
+            "ORDER BY j.date, j.id, jl.id",
+            (account_code, fiscal_year),
+        ).fetchall()
+
+        # 各行の相手勘定を判定
+        entries = []
+        balance = opening_balance
+        for row in rows:
+            journal_id = row["journal_id"]
+            side = row["side"]
+            amount = row["amount"]
+
+            # 同一仕訳の他の行を取得して相手勘定を判定
+            other_lines = conn.execute(
+                "SELECT jl.account_code, a.name "
+                "FROM journal_lines jl "
+                "INNER JOIN accounts a ON a.code = jl.account_code "
+                "WHERE jl.journal_id = ? AND jl.account_code != ?",
+                (journal_id, account_code),
+            ).fetchall()
+
+            if len(other_lines) == 1:
+                counter_code = other_lines[0]["account_code"]
+                counter_name = other_lines[0]["name"]
+            elif len(other_lines) == 0:
+                # 同一科目間の振替（例: 現金→現金は通常ないが念のため）
+                counter_code = account_code
+                counter_name = account_name
+            else:
+                # 複合仕訳
+                counter_code = "*"
+                counter_name = "諸口"
+
+            debit = amount if side == "debit" else 0
+            credit = amount if side == "credit" else 0
+
+            # 累積残高を計算
+            if debit_normal:
+                balance += debit - credit
+            else:
+                balance += credit - debit
+
+            entries.append(
+                {
+                    "journal_id": journal_id,
+                    "date": row["date"],
+                    "description": row["description"],
+                    "counterparty": row["counterparty"],
+                    "counter_account_code": counter_code,
+                    "counter_account_name": counter_name,
+                    "debit": debit,
+                    "credit": credit,
+                    "balance": balance,
+                }
+            )
+
+        return {
+            "status": "ok",
+            "account_code": account_code,
+            "account_name": account_name,
+            "fiscal_year": fiscal_year,
+            "opening_balance": opening_balance,
+            "entries": entries,
+            "closing_balance": balance,
+        }
+    finally:
+        conn.close()
+
+
+# ============================================================
 # 期首残高 (Opening Balances)
 # ============================================================
 

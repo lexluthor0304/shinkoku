@@ -96,6 +96,34 @@ class AuditLogRecord(BaseModel):
     created_at: str
 
 
+# --- 総勘定元帳 ---
+
+
+class GeneralLedgerLineRecord(BaseModel):
+    """総勘定元帳の1行。"""
+
+    journal_id: int
+    date: str
+    description: str | None
+    counterparty: str | None
+    counter_account_code: str  # 相手勘定科目コード（複合仕訳は「*」）
+    counter_account_name: str  # 相手勘定科目名（複合仕訳は「諸口」）
+    debit: int
+    credit: int
+    balance: int  # 累積残高
+
+
+class GeneralLedgerResult(BaseModel):
+    """総勘定元帳の出力。"""
+
+    account_code: str
+    account_name: str
+    fiscal_year: int
+    opening_balance: int
+    entries: list[GeneralLedgerLineRecord]
+    closing_balance: int
+
+
 # --- 財務諸表 ---
 
 

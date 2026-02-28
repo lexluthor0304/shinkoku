@@ -81,12 +81,12 @@ PRAGMA foreign_keys=ON      -- 外部キー制約の有効化
 | 仕訳帳 | `shinkoku ledger search --db-path <db> --input <params.json>` | 仕訳の一覧・検索 |
 | 総勘定元帳 | `shinkoku ledger general-ledger --db-path <db> --fiscal-year <year> --account-code <code>` | 勘定科目別の取引一覧 |
 | 残高試算表 | `shinkoku ledger trial-balance --db-path <db> --fiscal-year <year>` | 全勘定科目の借方・貸方残高 |
-| 損益計算書 | `shinkoku ledger profit-loss --db-path <db> --fiscal-year <year>` | 収益・費用の集計 |
-| 貸借対照表 | `shinkoku ledger balance-sheet --db-path <db> --fiscal-year <year>` | 資産・負債・純資産の集計 |
+| 損益計算書 | `shinkoku ledger pl --db-path <db> --fiscal-year <year>` | 収益・費用の集計 |
+| 貸借対照表 | `shinkoku ledger bs --db-path <db> --fiscal-year <year>` | 資産・負債・純資産の集計 |
 
 ### 出力形式
 
-全コマンドの出力は JSON 形式で標準出力に出力される。出力例:
+デフォルトでは JSON 形式で標準出力に出力される。出力例:
 
 ```json
 {
@@ -102,6 +102,21 @@ PRAGMA foreign_keys=ON      -- 外部キー制約の有効化
   "status": "error",
   "message": "エラーの詳細"
 }
+```
+
+### CSV 出力
+
+帳簿系コマンド（search, trial-balance, pl, bs, general-ledger, audit-log）は `--format csv` オプションで CSV 形式の出力に対応。税務調査時のダウンロード要求（電帳法施行規則第2条第2項第3号）に対応する。
+
+```bash
+# CSV 形式で残高試算表を出力
+shinkoku ledger trial-balance --db-path shinkoku.db --fiscal-year 2025 --format csv
+
+# CSV 形式で仕訳を検索・出力
+shinkoku ledger search --db-path shinkoku.db --input params.json --format csv
+
+# CSV 形式で総勘定元帳を出力
+shinkoku ledger general-ledger --db-path shinkoku.db --fiscal-year 2025 --account-code 5401 --format csv
 ```
 
 ## 4. 入力方法
